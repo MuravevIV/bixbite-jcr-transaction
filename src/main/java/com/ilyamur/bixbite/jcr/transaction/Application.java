@@ -25,7 +25,9 @@ public class Application {
         try {
             String user = session.getUserID();
             String name = repository.getDescriptor(Repository.REP_NAME_DESC);
-            LOG.info("Logged in as " + user + " to a " + name + " repository.");
+            String txSupport = repository.getDescriptor(Repository.OPTION_TRANSACTIONS_SUPPORTED);
+            LOG.info("Logged in as " + user + " to a " + name + " repository. "
+                    + "Is transactions supported?: " + txSupport);
         } finally {
             session.logout();
         }
