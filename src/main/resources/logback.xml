@@ -13,4 +13,6 @@
 		<appender-ref ref="console" />
 	</root>
 
+	<logger name="org.apache.jackrabbit" level="WARN"/>
+
 </configuration>
