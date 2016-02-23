@@ -1,6 +1,4 @@
-package com.ilyamur.bixbite.jcr.transaction;
-
-import org.apache.jackrabbit.api.XASession;
+package com.ilyamur.bixbite.jcr.transaction.session;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,7 +17,7 @@ import javax.transaction.xa.Xid;
  * Internal {@link javax.transaction.UserTransaction} implementation.
  */
 @SuppressWarnings("deprecation")
-public class UserTransactionImpl implements UserTransaction {
+public class XaResourceUserTransaction implements UserTransaction {
 
     /**
      * Global transaction id counter.
@@ -39,19 +37,26 @@ public class UserTransactionImpl implements UserTransaction {
     private boolean distributedThreadAccess = false;
 
     /**
-     * Create a new instance of this class. Takes a XASession as parameter.
+     * Create a new instance of this class. Takes a XAResource as parameter.
      */
-    public UserTransactionImpl(XASession xaSession) {
-        this(xaSession, false);
+    public XaResourceUserTransaction(XAResource xaResource) {
+        this(xaResource, false);
     }
 
     /**
-     * Create a new instance of this class. Takes a XASession as parameter.
+     * Create a new instance of this class.
      */
-    public UserTransactionImpl(XASession xaSession, boolean distributedThreadAccess) {
+    public XaResourceUserTransaction(boolean distributedThreadAccess) {
         counter++;
-        xaResources.put(xaSession.getXAResource(), new XidImpl(counter));
         this.distributedThreadAccess = distributedThreadAccess;
+    }
+
+    /**
+     * Create a new instance of this class. Takes a XAResource as parameter.
+     */
+    public XaResourceUserTransaction(XAResource xaResource, boolean distributedThreadAccess) {
+        this(distributedThreadAccess);
+        enlistXaResource(xaResource);
     }
 
     /**

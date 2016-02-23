@@ -3,6 +3,7 @@ package com.ilyamur.bixbite.jcr.transaction.example;
 import com.ilyamur.bixbite.jcr.transaction.JcrValueStore;
 import com.ilyamur.bixbite.jcr.transaction.JcrValueStoreImpl;
 import com.ilyamur.bixbite.jcr.transaction.session.XaResourceUserTransaction;
+import com.ilyamur.bixbite.jcr.transaction.session.XaSessionTransactionManager;
 import org.apache.jackrabbit.api.XASession;
 import org.apache.jackrabbit.core.TransientRepository;
 import org.slf4j.Logger;
@@ -14,11 +15,11 @@ import javax.jcr.Session;
 import javax.jcr.SimpleCredentials;
 
 /**
- * TransactionExample.
+ * XaSessionTransactionManagerExample.
  *
  * @author Ilya_Muravyev
  */
-public class UserTransactionExample {
+public class XaSessionTransactionManagerExample {
 
     private static final Logger LOG = LoggerFactory.getLogger(UserTransactionExample.class);
 
@@ -29,7 +30,9 @@ public class UserTransactionExample {
         Repository repository = new TransientRepository();
         JcrValueStore store = new JcrValueStoreImpl();
 
-        Session sessionO = getSession(repository);
+        XaSessionTransactionManager txManager = new XaSessionTransactionManager();
+
+        Session sessionO = getSession(repository, txManager);
         try {
             String messageO = store.load(sessionO);
             LOG.info("Session O load message: " + messageO);
@@ -37,7 +40,7 @@ public class UserTransactionExample {
             sessionO.logout();
         }
 
-        Session sessionA = getSession(repository);
+        Session sessionA = getSession(repository, txManager);
         try {
             String messageA = "testA";
             store.save(sessionA, messageA);
@@ -46,32 +49,22 @@ public class UserTransactionExample {
             sessionA.logout();
         }
 
-        Session sessionB = getSession(repository);
-        XaResourceUserTransaction userTransaction =
-                new XaResourceUserTransaction(((XASession) sessionB).getXAResource());
+        LOG.info("Begin global transaction");
+        txManager.begin();
 
-        Exception txException = null;
-        userTransaction.begin();
+        Session sessionB = getSession(repository, txManager);
         try {
-            try {
-                String messageB = "testB";
-                store.save(sessionB, messageB);
-                LOG.info("Session B save message: " + messageB);
-            } catch (Exception e) {
-                txException = e;
-            }
-            if (txException == null) {
-                LOG.info("Roll back session B changes");
-                userTransaction.rollback();
-            } else {
-                userTransaction.rollback();
-                throw txException;
-            }
+            String messageB = "testB";
+            store.save(sessionB, messageB);
+            LOG.info("Session B save message: " + messageB);
         } finally {
             sessionB.logout();
         }
 
-        Session sessionC = getSession(repository);
+        LOG.info("Roll back global transaction");
+        txManager.rollback();
+
+        Session sessionC = getSession(repository, txManager);
         try {
             String messageC = store.load(sessionC);
             LOG.info("Session C load message: " + messageC);
@@ -80,7 +73,10 @@ public class UserTransactionExample {
         }
     }
 
-    private static Session getSession(Repository repository) throws RepositoryException {
-        return repository.login(new SimpleCredentials("admin", "admin".toCharArray()));
+    private static Session getSession(Repository repository,
+                                      XaSessionTransactionManager txManager) throws RepositoryException {
+
+        Session session = repository.login(new SimpleCredentials("admin", "admin".toCharArray()));
+        return txManager.createProxySession((XASession) session);
     }
 }
